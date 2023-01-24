@@ -65,7 +65,6 @@ namespace MuseDashModTools
                     continue;
                 }
                 ModsInfo storedMod = WebModsInfo[loadedMod.Name];
-                int comparison;
                 var supportedVersions = new System.Version[storedMod.GameVersion.Length];
                 bool result = false;
                 for (int i = 0; i < storedMod.GameVersion.Length; i++)
@@ -84,7 +83,7 @@ namespace MuseDashModTools
                     MelonLogger.Error("Supported versions: " + string.Join(", ", storedMod.GameVersion));
                     continue;
                 }
-                comparison = new System.Version(loadedMod.Version).CompareTo(new System.Version(storedMod.Version));
+                int comparison = new System.Version(loadedMod.Version).CompareTo(new System.Version(storedMod.Version));
                 if (comparison < 0)
                 {
                     MelonLogger.Warning($"You are using an outdated version of \"{loadedMod.Name}\", please update the mod");
