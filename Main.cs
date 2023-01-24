@@ -1,8 +1,11 @@
-﻿using MelonLoader;
+﻿using Il2CppSystem;
+using MelonLoader;
 using MelonLoader.InternalUtils;
 using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -11,9 +14,9 @@ namespace MuseDashModTools
 {
     internal class Main : MelonMod
     {
-        private static int GameVersion { get; set; }
+        private static System.Version GameVersion { get; set; }
         private static List<ModsInfo> modsInfos = new List<ModsInfo>();
-        private const string ModLinks = "https://raw.githubusercontent.com/MDModsDev/ModLinks/main/ModLinks.json";
+        private const string ModLinks = "https://raw.githubusercontent.com/MDModsDev/ModLinks/dev/ModLinks.json";
 
         public override void OnInitializeMelon()
         {
@@ -23,14 +26,14 @@ namespace MuseDashModTools
 
         private void ReadMods()
         {
-            GameVersion = int.Parse(UnityInformationHandler.GameVersion.Replace(".", ""));
+            GameVersion = new System.Version(UnityInformationHandler.GameVersion);
             string path = MelonHandler.ModsDirectory;
-            var files = Directory.GetFiles(path, "*.dll");
+            string[] files = Directory.GetFiles(path, "*.dll");
             foreach (var file in files)
             {
                 var mod = new ModsInfo();
                 var assembly = Assembly.LoadFrom(file);
-                var properties = assembly.GetCustomAttribute(typeof(MelonInfoAttribute)).GetType().GetProperties();
+                PropertyInfo[] properties = assembly.GetCustomAttribute(typeof(MelonInfoAttribute)).GetType().GetProperties();
                 foreach (var property in properties)
                 {
                     if (property.Name == "Name")
@@ -48,57 +51,53 @@ namespace MuseDashModTools
 
         private void CheckingLatestMods()
         {
-            var webClient = new WebClient();
-            webClient.Encoding = Encoding.UTF8;
-            var Datas = Encoding.Default.GetString(webClient.DownloadData(ModLinks));
-            var WebModsInfo = JsonConvert.DeserializeObject<List<ModsInfo>>(Datas);
-            for (int i = 0; i < modsInfos.Count; i++)
+            var webClient = new WebClient
             {
-                for (int j = 0; j < WebModsInfo.Count; j++)
+                Encoding = Encoding.UTF8
+            };
+            string Datas = Encoding.Default.GetString(webClient.DownloadData(ModLinks));
+            var WebModsInfo = JsonConvert.DeserializeObject<Dictionary<string, ModsInfo>>(Datas);
+            foreach (var loadedMod in modsInfos)
+            {
+                if (!WebModsInfo.ContainsKey(loadedMod.Name))
                 {
-                    int ModVersion = int.Parse(modsInfos[i].Version.Replace(".", ""));
-                    int WebModVersion = int.Parse(WebModsInfo[j].Version.Replace(".", ""));
-                    for (int m = 0; m < WebModsInfo[j].GameVersion.Length; m++)
-                    {
-                        int WebModGameVersion = int.Parse(WebModsInfo[j].GameVersion[m].Replace(".", ""));
-                        if (modsInfos[i].Name == WebModsInfo[j].Name)
-                        {
-                            if (ModVersion == WebModVersion)
-                            {
-                                if (GameVersion < WebModGameVersion)
-                                {
-                                    MelonLogger.Msg("Are you using a pirated game or you forget to upgrade the game? " + modsInfos[i].Name + " maybe not working on this game version");
-                                    break;
-                                }
-                                else if (GameVersion == WebModGameVersion)
-                                {
-                                    MelonLogger.Msg(modsInfos[i].Name + " is the latest working version");
-                                    break;
-                                }
-                                else if (GameVersion > WebModGameVersion && m == WebModsInfo[j].GameVersion.Length - 1)
-                                {
-                                    MelonLogger.Msg("Please downgrade the game to make " + modsInfos[i].Name + " to work");
-                                    break;
-                                }
-                            }
-                            else if (ModVersion > WebModGameVersion)
-                            {
-                                MelonLogger.Msg("WOW MOD CREATER");
-                                break;
-                            }
-                            else if (ModVersion < WebModGameVersion)
-                            {
-                                MelonLogger.Msg("You are using an outdated version of " + modsInfos[i].Name + ", please update the mod");
-                                break;
-                            }
-                        }
-                        else if (modsInfos[i].Name != WebModsInfo[j].Name && j == WebModsInfo.Count - 1)
-                        {
-                            MelonLogger.Msg("Cannot find your mod " + modsInfos[i].Name + " in modlinks, are u trying to create a new mod?");
-                            break;
-                        }
-                    }
+                    MelonLogger.Warning($"The mod \"{loadedMod.Name}\" isn't tracked.");
+                    continue;
                 }
+                ModsInfo storedMod = WebModsInfo[loadedMod.Name];
+                int comparison;
+                var supportedVersions = new System.Version[storedMod.GameVersion.Length];
+                bool result = false;
+                for (int i = 0; i < storedMod.GameVersion.Length; i++)
+                {
+                    var version = storedMod.GameVersion[i] == "*" ? GameVersion : new System.Version(storedMod.GameVersion[i]);
+                    int t = GameVersion.CompareTo(version);
+                    if (t == 0)
+                    {
+                        result = true;
+                    }
+                    supportedVersions[t] = version;
+                }
+                if (!result)
+                {
+                    MelonLogger.Error($"The mod \"{loadedMod.Name}\" isn't compatible with game version {GameVersion}");
+                    MelonLogger.Error("Supported versions: " + string.Join(", ", storedMod.GameVersion));
+                    continue;
+                }
+                comparison = new System.Version(loadedMod.Version).CompareTo(new System.Version(storedMod.Version));
+                if (comparison < 0)
+                {
+                    MelonLogger.Warning($"You are using an outdated version of \"{loadedMod.Name}\", please update the mod");
+                }
+                else if (comparison == 0)
+                {
+                    MelonLogger.Msg($"the mod \"{loadedMod.Name}\" is up-to-date");
+                }
+                else
+                {
+                    MelonLogger.Msg($"WOW {loadedMod.Name.ToUpper()} MOD CREATER");
+                }
+
             }
         }
     }
