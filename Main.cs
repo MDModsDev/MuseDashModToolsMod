@@ -58,42 +58,45 @@ namespace MuseDashModTools
                 {
                     int ModVersion = int.Parse(modsInfos[i].Version.Replace(".", ""));
                     int WebModVersion = int.Parse(WebModsInfo[j].Version.Replace(".", ""));
-                    int WebModGameVersion = int.Parse(WebModsInfo[j].GameVersion.Replace(".", ""));
-                    if (modsInfos[i].Name == WebModsInfo[j].Name)
+                    for (int m = 0; m < WebModsInfo[j].GameVersion.Length; m++)
                     {
-                        if (ModVersion == WebModVersion)
+                        int WebModGameVersion = int.Parse(WebModsInfo[j].GameVersion[m].Replace(".", ""));
+                        if (modsInfos[i].Name == WebModsInfo[j].Name)
                         {
-                            if (GameVersion == WebModGameVersion)
+                            if (ModVersion == WebModVersion)
                             {
-                                MelonLogger.Msg(modsInfos[i].Name + " is the latest version");
+                                if (GameVersion < WebModGameVersion)
+                                {
+                                    MelonLogger.Msg("Are you using a pirated game or you forget to upgrade the game? " + modsInfos[i].Name + " maybe not working on this game version");
+                                    break;
+                                }
+                                else if (GameVersion == WebModGameVersion)
+                                {
+                                    MelonLogger.Msg(modsInfos[i].Name + " is the latest working version");
+                                    break;
+                                }
+                                else if (GameVersion > WebModGameVersion && m == WebModsInfo[j].GameVersion.Length - 1)
+                                {
+                                    MelonLogger.Msg("Please downgrade the game to make " + modsInfos[i].Name + " to work");
+                                    break;
+                                }
+                            }
+                            else if (ModVersion > WebModGameVersion)
+                            {
+                                MelonLogger.Msg("WOW MOD CREATER");
                                 break;
                             }
-                            else if (GameVersion > WebModGameVersion)
+                            else if (ModVersion < WebModGameVersion)
                             {
-                                MelonLogger.Msg("Please downgrade the game to make " + modsInfos[i].Name + " to work");
-                                break;
-                            }
-                            else if (GameVersion < WebModGameVersion)
-                            {
-                                MelonLogger.Msg("Are you using a pirated game or you forget to upgrade the game? " + modsInfos[i].Name + " maybe not working on this game version");
+                                MelonLogger.Msg("You are using an outdated version of " + modsInfos[i].Name + ", please update the mod");
                                 break;
                             }
                         }
-                        else if (ModVersion > WebModGameVersion)
+                        else if (modsInfos[i].Name != WebModsInfo[j].Name && j == WebModsInfo.Count - 1)
                         {
-                            MelonLogger.Msg("WOW MOD CREATER");
+                            MelonLogger.Msg("Cannot find your mod " + modsInfos[i].Name + " in modlinks, are u trying to create a new mod?");
                             break;
                         }
-                        else if (ModVersion < WebModGameVersion)
-                        {
-                            MelonLogger.Msg("You are using an outdated version of " + modsInfos[i].Name + ", please update the mod");
-                            break;
-                        }
-                    }
-                    else if (modsInfos[i].Name != WebModsInfo[j].Name && j == WebModsInfo.Count - 1)
-                    {
-                        MelonLogger.Msg("Cannot find your mod " + modsInfos[i].Name + " in modlinks, are u trying to create a new mod?");
-                        break;
                     }
                 }
             }
@@ -106,7 +109,7 @@ namespace MuseDashModTools
         public string Version { get; set; }
         public string Author { get; set; }
         public string DownloadLink { get; set; }
-        public string GameVersion { get; set; }
+        public string[] GameVersion { get; set; }
         public string Description { get; set; }
         public string[] DependentMods { get; set; }
         public string SHA256 { get; set; }
@@ -117,13 +120,13 @@ namespace MuseDashModTools
             Version = "Unknown";
             Author = "Unknown";
             DownloadLink = "";
-            GameVersion = "Unknown";
+            GameVersion = new string[0];
             Description = "";
             DependentMods = new string[0];
             SHA256 = "";
         }
 
-        public ModsInfo(string name, string version, string author, string downloadLink, string gameVersion, string description, string[] dependentMods, string sha256)
+        public ModsInfo(string name, string version, string author, string downloadLink, string[] gameVersion, string description, string[] dependentMods, string sha256)
         {
             Name = name;
             Version = version;
