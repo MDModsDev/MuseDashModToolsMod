@@ -68,6 +68,11 @@ namespace MuseDashModTools
                 }
                 ModsInfo storedMod = WebModsInfo[loadedMod.Name];
 
+                int comparison = new System.Version(loadedMod.Version).CompareTo(new System.Version(storedMod.Version));
+                if (comparison > 0)
+                {
+                    MelonLogger.Msg($"WOW {loadedMod.Name.ToUpper()} MOD CREATER");
+                }
 
                 foreach (string incompatibleMod in storedMod.IncompatibleMods)
                 {
@@ -75,13 +80,6 @@ namespace MuseDashModTools
                     {
                         MelonLogger.Error($"The mod \"{loadedMod.Name}\" isn't compatible with mod {incompatibleMod}");
                     }
-                }
-
-                int comparison = new System.Version(loadedMod.Version).CompareTo(new System.Version(storedMod.Version));
-                if (comparison > 0)
-                {
-                    MelonLogger.Msg($"WOW {loadedMod.Name.ToUpper()} MOD CREATER");
-                    continue;
                 }
 
                 var supportedVersions = new System.Version[storedMod.GameVersion.Length];
