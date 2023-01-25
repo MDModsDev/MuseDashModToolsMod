@@ -112,14 +112,12 @@ namespace MuseDashModTools
                 {
                     MelonLogger.Warning($"You are using an outdated version of \"{loadedMod.Name}\", please update the mod");
                 }
-
             }
         }
     }
 
     public class WebModInfo
     {
-        public string Name { get; set; }
         public string Version { get; set; }
         public string Author { get; set; }
         public string DownloadLink { get; set; }
@@ -131,7 +129,6 @@ namespace MuseDashModTools
 
         public WebModInfo()
         {
-            Name = "Unknown";
             Version = "Unknown";
             Author = "Unknown";
             DownloadLink = "";
@@ -142,9 +139,8 @@ namespace MuseDashModTools
             SHA256 = "";
         }
 
-        public WebModInfo(string name, string version, string author, string downloadLink, string[] gameVersion, string description, string[] dependentMods, string[] incompatibleMods, string sha256)
+        public WebModInfo(string version, string author, string downloadLink, string[] gameVersion, string description, string[] dependentMods, string[] incompatibleMods, string sha256)
         {
-            Name = name;
             Version = version;
             Author = author;
             DownloadLink = downloadLink;
