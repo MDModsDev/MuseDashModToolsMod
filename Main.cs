@@ -1,5 +1,4 @@
-﻿using Il2CppSystem;
-using MelonLoader;
+﻿using MelonLoader;
 using MelonLoader.InternalUtils;
 using Newtonsoft.Json;
 using System;
@@ -8,13 +7,14 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace MuseDashModTools
 {
     internal class Main : MelonMod
     {
-        private static System.Version GameVersion { get; set; }
+        private static Version GameVersion { get; set; }
         private static List<LocalModInfo> modsInfos = new List<LocalModInfo>();
         private const string ModLinks = "https://raw.githubusercontent.com/MDModsDev/ModLinks/dev/ModLinks.json";
 
@@ -26,7 +26,7 @@ namespace MuseDashModTools
 
         private void ReadMods()
         {
-            GameVersion = new System.Version(UnityInformationHandler.GameVersion);
+            GameVersion = new Version(UnityInformationHandler.GameVersion);
             string path = MelonHandler.ModsDirectory;
             string[] files = Directory.GetFiles(path, "*.dll");
             foreach (var file in files)
@@ -46,6 +46,20 @@ namespace MuseDashModTools
                     }
                 }
                 modsInfos.Add(mod);
+            }
+
+            FileInfo[] fileInfos = new DirectoryInfo(path).GetFiles();
+            for (int i = 0; i < modsInfos.Count; i++)
+            {
+                SHA256 mySHA256 = SHA256.Create();
+                var fInfo = fileInfos[i];
+                FileStream fileStream = fInfo.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                fileStream.Position = 0;
+                byte[] hashValue = mySHA256.ComputeHash(fileStream);
+                string output = BitConverter.ToString(hashValue).Replace("-", "").ToLower();
+                modsInfos[i].SHA256 = output;
+                fileStream.Close();
+                i++;
             }
         }
 
@@ -68,13 +82,13 @@ namespace MuseDashModTools
                 }
                 WebModInfo storedMod = WebModsInfo[loadedMod.Name];
 
-                int comparison = new System.Version(loadedMod.Version).CompareTo(new System.Version(storedMod.Version));
+                int comparison = new Version(loadedMod.Version).CompareTo(new Version(storedMod.Version));
                 if (comparison > 0)
                 {
                     MelonLogger.Msg($"WOW {loadedMod.Name.ToUpper()} MOD CREATER");
                 }
 
-                var supportedVersions = new System.Version[storedMod.GameVersion.Length];
+                var supportedVersions = new Version[storedMod.GameVersion.Length];
                 bool result = comparison == 0;
                 if (!result)
                 {
@@ -87,7 +101,7 @@ namespace MuseDashModTools
                     }
                     for (int i = 0; i < storedMod.GameVersion.Length; i++)
                     {
-                        var version = storedMod.GameVersion[i] == "*" ? GameVersion : new System.Version(storedMod.GameVersion[i]);
+                        var version = storedMod.GameVersion[i] == "*" ? GameVersion : new Version(storedMod.GameVersion[i]);
                         int t = GameVersion.CompareTo(version);
                         if (t == 0)
                         {
