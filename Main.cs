@@ -69,6 +69,7 @@ namespace MuseDashModTools
                 Encoding = Encoding.UTF8
             };
             string Datas = Encoding.Default.GetString(webClient.DownloadData(ModLinks));
+            webClient.Dispose();
             var WebModsInfo = JsonConvert.DeserializeObject<Dictionary<string, WebModInfo>>(Datas);
             string[] loadedModNames = modsInfos.Select(x => x.Name).ToArray();
             foreach (var loadedMod in modsInfos)
@@ -96,18 +97,17 @@ namespace MuseDashModTools
                 }
 
                 var supportedVersions = new Version[storedMod.GameVersion.Length];
-                bool result = comparison == 0;
+                bool result = comparison > 0;
                 if (!result)
                 {
                     for (int i = 0; i < storedMod.GameVersion.Length; i++)
                     {
                         var version = storedMod.GameVersion[i] == "*" ? GameVersion : new Version(storedMod.GameVersion[i]);
-                        int t = GameVersion.CompareTo(version);
-                        if (t == 0)
+                        if (GameVersion.CompareTo(version) == 0)
                         {
                             result = true;
                         }
-                        supportedVersions[t] = version;
+                        supportedVersions[i] = version;
                     }
                     if (!result)
                     {
@@ -115,10 +115,10 @@ namespace MuseDashModTools
                         MelonLogger.Error("Supported versions: " + string.Join(", ", storedMod.GameVersion));
                     }
                 }
-
+                
                 if (loadedMod.SHA256 != storedMod.SHA256)
                 {
-                    MelonLogger.Warning($"This file doesn't match what we have stored, may be modified. Proceed with caution.");
+                    MelonLogger.Warning($"The mod \"{loadedMod.Name}\" doesn't match what we have stored, may be modified. Proceed with caution.");
                 }
 
                 if (!result)
