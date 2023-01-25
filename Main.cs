@@ -57,14 +57,31 @@ namespace MuseDashModTools
             };
             string Datas = Encoding.Default.GetString(webClient.DownloadData(ModLinks));
             var WebModsInfo = JsonConvert.DeserializeObject<Dictionary<string, ModsInfo>>(Datas);
+            string[] loadedModNames = modsInfos.Select(x => x.Name).ToArray();
             foreach (var loadedMod in modsInfos)
             {
+                MelonLogger.Msg("--------------------");
                 if (!WebModsInfo.ContainsKey(loadedMod.Name))
                 {
                     MelonLogger.Warning($"The mod \"{loadedMod.Name}\" isn't tracked.");
                     continue;
                 }
                 ModsInfo storedMod = WebModsInfo[loadedMod.Name];
+
+                int comparison = new System.Version(loadedMod.Version).CompareTo(new System.Version(storedMod.Version));
+                if (comparison > 0)
+                {
+                    MelonLogger.Msg($"WOW {loadedMod.Name.ToUpper()} MOD CREATER");
+                }
+
+                foreach (string incompatibleMod in storedMod.IncompatibleMods)
+                {
+                    if (loadedModNames.Contains(incompatibleMod))
+                    {
+                        MelonLogger.Error($"The mod \"{loadedMod.Name}\" isn't compatible with mod {incompatibleMod}");
+                    }
+                }
+
                 var supportedVersions = new System.Version[storedMod.GameVersion.Length];
                 bool result = false;
                 for (int i = 0; i < storedMod.GameVersion.Length; i++)
@@ -83,18 +100,14 @@ namespace MuseDashModTools
                     MelonLogger.Error("Supported versions: " + string.Join(", ", storedMod.GameVersion));
                     continue;
                 }
-                int comparison = new System.Version(loadedMod.Version).CompareTo(new System.Version(storedMod.Version));
-                if (comparison < 0)
-                {
-                    MelonLogger.Warning($"You are using an outdated version of \"{loadedMod.Name}\", please update the mod");
-                }
-                else if (comparison == 0)
+
+                if (comparison == 0)
                 {
                     MelonLogger.Msg($"the mod \"{loadedMod.Name}\" is up-to-date");
                 }
                 else
                 {
-                    MelonLogger.Msg($"WOW {loadedMod.Name.ToUpper()} MOD CREATER");
+                    MelonLogger.Warning($"You are using an outdated version of \"{loadedMod.Name}\", please update the mod");
                 }
 
             }
@@ -110,6 +123,7 @@ namespace MuseDashModTools
         public string[] GameVersion { get; set; }
         public string Description { get; set; }
         public string[] DependentMods { get; set; }
+        public string[] IncompatibleMods { get; set; }
         public string SHA256 { get; set; }
 
         public ModsInfo()
@@ -121,10 +135,11 @@ namespace MuseDashModTools
             GameVersion = new string[0];
             Description = "";
             DependentMods = new string[0];
+            IncompatibleMods = new string[0];
             SHA256 = "";
         }
 
-        public ModsInfo(string name, string version, string author, string downloadLink, string[] gameVersion, string description, string[] dependentMods, string sha256)
+        public ModsInfo(string name, string version, string author, string downloadLink, string[] gameVersion, string description, string[] dependentMods, string[] incompatibleMods, string sha256)
         {
             Name = name;
             Version = version;
@@ -133,6 +148,7 @@ namespace MuseDashModTools
             GameVersion = gameVersion;
             Description = description;
             DependentMods = dependentMods;
+            IncompatibleMods = incompatibleMods;
             SHA256 = sha256;
         }
     }
