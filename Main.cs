@@ -59,7 +59,6 @@ namespace MuseDashModTools
                 string output = BitConverter.ToString(hashValue).Replace("-", "").ToLower();
                 modsInfos[i].SHA256 = output;
                 fileStream.Close();
-                i++;
             }
         }
 
