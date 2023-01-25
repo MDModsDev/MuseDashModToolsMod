@@ -86,18 +86,19 @@ namespace MuseDashModTools
                 {
                     MelonLogger.Msg($"WOW {loadedMod.Name.ToUpper()} MOD CREATER");
                 }
+                else if (comparison == 0)
+                {
+                    MelonLogger.Msg($"the mod \"{loadedMod.Name}\" is up-to-date");
+                }
+                else if (comparison < 0)
+                {
+                    MelonLogger.Warning($"You are using an outdated version of \"{loadedMod.Name}\", please update the mod (if your game is downgraded, ignore this message)");
+                }
 
                 var supportedVersions = new Version[storedMod.GameVersion.Length];
                 bool result = comparison == 0;
                 if (!result)
                 {
-                    foreach (string incompatibleMod in storedMod.IncompatibleMods)
-                    {
-                        if (loadedModNames.Contains(incompatibleMod))
-                        {
-                            MelonLogger.Error($"The mod \"{loadedMod.Name}\" isn't compatible with mod {incompatibleMod}");
-                        }
-                    }
                     for (int i = 0; i < storedMod.GameVersion.Length; i++)
                     {
                         var version = storedMod.GameVersion[i] == "*" ? GameVersion : new Version(storedMod.GameVersion[i]);
@@ -108,22 +109,27 @@ namespace MuseDashModTools
                         }
                         supportedVersions[t] = version;
                     }
+                    if (!result)
+                    {
+                        MelonLogger.Error($"The mod \"{loadedMod.Name}\" isn't compatible with game version {GameVersion}");
+                        MelonLogger.Error("Supported versions: " + string.Join(", ", storedMod.GameVersion));
+                    }
+                }
+
+                if (loadedMod.SHA256 != storedMod.SHA256)
+                {
+                    MelonLogger.Warning($"This file doesn't match what we have stored, may be modified. Proceed with caution.");
                 }
 
                 if (!result)
                 {
-                    MelonLogger.Error($"The mod \"{loadedMod.Name}\" isn't compatible with game version {GameVersion}");
-                    MelonLogger.Error("Supported versions: " + string.Join(", ", storedMod.GameVersion));
-                    continue;
-                }
-
-                if (comparison == 0)
-                {
-                    MelonLogger.Msg($"the mod \"{loadedMod.Name}\" is up-to-date");
-                }
-                else if (comparison < 0)
-                {
-                    MelonLogger.Warning($"You are using an outdated version of \"{loadedMod.Name}\", please update the mod");
+                    foreach (string incompatibleMod in storedMod.IncompatibleMods)
+                    {
+                        if (loadedModNames.Contains(incompatibleMod))
+                        {
+                            MelonLogger.Error($"The mod \"{loadedMod.Name}\" isn't compatible with mod {incompatibleMod}");
+                        }
+                    }
                 }
             }
         }
