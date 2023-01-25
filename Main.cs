@@ -74,26 +74,29 @@ namespace MuseDashModTools
                     MelonLogger.Msg($"WOW {loadedMod.Name.ToUpper()} MOD CREATER");
                 }
 
-                foreach (string incompatibleMod in storedMod.IncompatibleMods)
+                var supportedVersions = new System.Version[storedMod.GameVersion.Length];
+                bool result = comparison == 0;
+                if (!result)
                 {
-                    if (loadedModNames.Contains(incompatibleMod))
+                    foreach (string incompatibleMod in storedMod.IncompatibleMods)
                     {
-                        MelonLogger.Error($"The mod \"{loadedMod.Name}\" isn't compatible with mod {incompatibleMod}");
+                        if (loadedModNames.Contains(incompatibleMod))
+                        {
+                            MelonLogger.Error($"The mod \"{loadedMod.Name}\" isn't compatible with mod {incompatibleMod}");
+                        }
+                    }
+                    for (int i = 0; i < storedMod.GameVersion.Length; i++)
+                    {
+                        var version = storedMod.GameVersion[i] == "*" ? GameVersion : new System.Version(storedMod.GameVersion[i]);
+                        int t = GameVersion.CompareTo(version);
+                        if (t == 0)
+                        {
+                            result = true;
+                        }
+                        supportedVersions[t] = version;
                     }
                 }
 
-                var supportedVersions = new System.Version[storedMod.GameVersion.Length];
-                bool result = false;
-                for (int i = 0; i < storedMod.GameVersion.Length; i++)
-                {
-                    var version = storedMod.GameVersion[i] == "*" ? GameVersion : new System.Version(storedMod.GameVersion[i]);
-                    int t = GameVersion.CompareTo(version);
-                    if (t == 0)
-                    {
-                        result = true;
-                    }
-                    supportedVersions[t] = version;
-                }
                 if (!result)
                 {
                     MelonLogger.Error($"The mod \"{loadedMod.Name}\" isn't compatible with game version {GameVersion}");
@@ -105,7 +108,7 @@ namespace MuseDashModTools
                 {
                     MelonLogger.Msg($"the mod \"{loadedMod.Name}\" is up-to-date");
                 }
-                else
+                else if (comparison < 0)
                 {
                     MelonLogger.Warning($"You are using an outdated version of \"{loadedMod.Name}\", please update the mod");
                 }
