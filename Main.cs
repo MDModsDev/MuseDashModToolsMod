@@ -15,7 +15,7 @@ namespace MuseDashModTools
     internal class Main : MelonMod
     {
         private static System.Version GameVersion { get; set; }
-        private static List<ModsInfo> modsInfos = new List<ModsInfo>();
+        private static List<LocalModInfo> modsInfos = new List<LocalModInfo>();
         private const string ModLinks = "https://raw.githubusercontent.com/MDModsDev/ModLinks/dev/ModLinks.json";
 
         public override void OnInitializeMelon()
@@ -31,7 +31,7 @@ namespace MuseDashModTools
             string[] files = Directory.GetFiles(path, "*.dll");
             foreach (var file in files)
             {
-                var mod = new ModsInfo();
+                var mod = new LocalModInfo();
                 var assembly = Assembly.LoadFrom(file);
                 PropertyInfo[] properties = assembly.GetCustomAttribute(typeof(MelonInfoAttribute)).GetType().GetProperties();
                 foreach (var property in properties)
@@ -56,7 +56,7 @@ namespace MuseDashModTools
                 Encoding = Encoding.UTF8
             };
             string Datas = Encoding.Default.GetString(webClient.DownloadData(ModLinks));
-            var WebModsInfo = JsonConvert.DeserializeObject<Dictionary<string, ModsInfo>>(Datas);
+            var WebModsInfo = JsonConvert.DeserializeObject<Dictionary<string, WebModInfo>>(Datas);
             string[] loadedModNames = modsInfos.Select(x => x.Name).ToArray();
             foreach (var loadedMod in modsInfos)
             {
@@ -66,7 +66,7 @@ namespace MuseDashModTools
                     MelonLogger.Warning($"The mod \"{loadedMod.Name}\" isn't tracked.");
                     continue;
                 }
-                ModsInfo storedMod = WebModsInfo[loadedMod.Name];
+                WebModInfo storedMod = WebModsInfo[loadedMod.Name];
 
                 int comparison = new System.Version(loadedMod.Version).CompareTo(new System.Version(storedMod.Version));
                 if (comparison > 0)
@@ -117,7 +117,7 @@ namespace MuseDashModTools
         }
     }
 
-    public class ModsInfo
+    public class WebModInfo
     {
         public string Name { get; set; }
         public string Version { get; set; }
@@ -129,7 +129,7 @@ namespace MuseDashModTools
         public string[] IncompatibleMods { get; set; }
         public string SHA256 { get; set; }
 
-        public ModsInfo()
+        public WebModInfo()
         {
             Name = "Unknown";
             Version = "Unknown";
@@ -142,7 +142,7 @@ namespace MuseDashModTools
             SHA256 = "";
         }
 
-        public ModsInfo(string name, string version, string author, string downloadLink, string[] gameVersion, string description, string[] dependentMods, string[] incompatibleMods, string sha256)
+        public WebModInfo(string name, string version, string author, string downloadLink, string[] gameVersion, string description, string[] dependentMods, string[] incompatibleMods, string sha256)
         {
             Name = name;
             Version = version;
@@ -154,5 +154,12 @@ namespace MuseDashModTools
             IncompatibleMods = incompatibleMods;
             SHA256 = sha256;
         }
+    }
+
+    public class LocalModInfo
+    {
+        public string Name { get; set; }
+        public string Version { get; set; }
+        public string SHA256 { get; set; }
     }
 }
