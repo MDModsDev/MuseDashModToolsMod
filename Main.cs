@@ -1,8 +1,10 @@
 ﻿using MelonLoader;
 using MelonLoader.InternalUtils;
 using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -11,9 +13,9 @@ namespace MuseDashModTools
 {
     internal class Main : MelonMod
     {
-        private static int GameVersion { get; set; }
-        private static List<ModsInfo> modsInfos = new List<ModsInfo>();
-        private const string ModLinks = "https://raw.githubusercontent.com/MDModsDev/ModLinks/main/ModLinks.json";
+        private static Version GameVersion { get; set; }
+        private static List<LocalModInfo> ModInfos = new List<LocalModInfo>();
+        private const string ModLinks = "https://raw.githubusercontent.com/MDModsDev/ModLinks/dev/ModLinks.json";
 
         public override void OnInitializeMelon()
         {
@@ -21,121 +23,113 @@ namespace MuseDashModTools
             CheckingLatestMods();
         }
 
+#pragma warning disable S3885
+
         private void ReadMods()
         {
-            GameVersion = int.Parse(UnityInformationHandler.GameVersion.Replace(".", ""));
+            GameVersion = new Version(UnityInformationHandler.GameVersion);
             string path = MelonHandler.ModsDirectory;
-            var files = Directory.GetFiles(path, "*.dll");
+            string[] files = Directory.GetFiles(path, "*.dll");
             foreach (var file in files)
             {
-                var mod = new ModsInfo();
+                var mod = new LocalModInfo();
                 var assembly = Assembly.LoadFrom(file);
-                var properties = assembly.GetCustomAttribute(typeof(MelonInfoAttribute)).GetType().GetProperties();
-                foreach (var property in properties)
-                {
-                    if (property.Name == "Name")
-                    {
-                        mod.Name = property.GetValue(assembly.GetCustomAttribute(typeof(MelonInfoAttribute)), null).ToString();
-                    }
-                    if (property.Name == "Version")
-                    {
-                        mod.Version = property.GetValue(assembly.GetCustomAttribute(typeof(MelonInfoAttribute)), null).ToString();
-                    }
-                }
-                modsInfos.Add(mod);
+                var attribute = MelonUtils.PullAttributeFromAssembly<MelonInfoAttribute>(assembly);
+                mod.Name = attribute.Name;
+                mod.Version = attribute.Version;
+                mod.SHA256 = MelonUtils.ComputeSimpleSHA256Hash(file);
+                ModInfos.Add(mod);
             }
         }
 
         private void CheckingLatestMods()
         {
-            var webClient = new WebClient();
-            webClient.Encoding = Encoding.UTF8;
-            var Datas = Encoding.Default.GetString(webClient.DownloadData(ModLinks));
-            var WebModsInfo = JsonConvert.DeserializeObject<List<ModsInfo>>(Datas);
-            for (int i = 0; i < modsInfos.Count; i++)
+            var webClient = new WebClient
             {
-                for (int j = 0; j < WebModsInfo.Count; j++)
+                Encoding = Encoding.UTF8
+            };
+            string Datas = Encoding.Default.GetString(webClient.DownloadData(ModLinks));
+            webClient.Dispose();
+            var WebModsInfo = JsonConvert.DeserializeObject<Dictionary<string, WebModInfo>>(Datas);
+            string[] loadedModNames = ModInfos.Select(x => x.Name).ToArray();
+            foreach (var loadedMod in ModInfos)
+            {
+                MelonLogger.Msg("--------------------");
+                if (!WebModsInfo.ContainsKey(loadedMod.Name))
                 {
-                    int ModVersion = int.Parse(modsInfos[i].Version.Replace(".", ""));
-                    int WebModVersion = int.Parse(WebModsInfo[j].Version.Replace(".", ""));
-                    for (int m = 0; m < WebModsInfo[j].GameVersion.Length; m++)
+                    MelonLogger.Warning($"The mod \"{loadedMod.Name}\" isn't tracked.");
+                    continue;
+                }
+                WebModInfo storedMod = WebModsInfo[loadedMod.Name];
+
+                int comparison = new Version(loadedMod.Version).CompareTo(new Version(storedMod.Version));
+                if (comparison > 0)
+                {
+                    MelonLogger.Msg($"WOW {loadedMod.Name} MOD CREATER");
+                }
+                else if (comparison == 0)
+                {
+                    if (loadedMod.SHA256 != storedMod.SHA256)
                     {
-                        int WebModGameVersion = int.Parse(WebModsInfo[j].GameVersion[m].Replace(".", ""));
-                        if (modsInfos[i].Name == WebModsInfo[j].Name)
+                        MelonLogger.Warning($"The mod \"{loadedMod.Name}\" doesn't match what we have stored, may be modified. Proceed with caution.");
+                    }
+                    else
+                    {
+                        MelonLogger.Msg($"The mod \"{loadedMod.Name}\" is up-to-date");
+                    }
+                }
+                else if (comparison < 0)
+                {
+                    MelonLogger.Warning($"You are using an outdated version of \"{loadedMod.Name}\", please update the mod (if your game is downgraded, ignore this message)");
+                }
+
+                bool gameVersionCompatible = false;
+                if (comparison == 0)
+                {
+                    foreach (var compatibleVersion in storedMod.GameVersion)
+                    {
+                        var version = compatibleVersion == "*" ? GameVersion : new Version(compatibleVersion);
+                        if (GameVersion.CompareTo(version) == 0)
                         {
-                            if (ModVersion == WebModVersion)
-                            {
-                                if (GameVersion < WebModGameVersion)
-                                {
-                                    MelonLogger.Msg("Are you using a pirated game or you forget to upgrade the game? " + modsInfos[i].Name + " maybe not working on this game version");
-                                    break;
-                                }
-                                else if (GameVersion == WebModGameVersion)
-                                {
-                                    MelonLogger.Msg(modsInfos[i].Name + " is the latest working version");
-                                    break;
-                                }
-                                else if (GameVersion > WebModGameVersion && m == WebModsInfo[j].GameVersion.Length - 1)
-                                {
-                                    MelonLogger.Msg("Please downgrade the game to make " + modsInfos[i].Name + " to work");
-                                    break;
-                                }
-                            }
-                            else if (ModVersion > WebModGameVersion)
-                            {
-                                MelonLogger.Msg("WOW MOD CREATER");
-                                break;
-                            }
-                            else if (ModVersion < WebModGameVersion)
-                            {
-                                MelonLogger.Msg("You are using an outdated version of " + modsInfos[i].Name + ", please update the mod");
-                                break;
-                            }
+                            gameVersionCompatible = true;
                         }
-                        else if (modsInfos[i].Name != WebModsInfo[j].Name && j == WebModsInfo.Count - 1)
-                        {
-                            MelonLogger.Msg("Cannot find your mod " + modsInfos[i].Name + " in modlinks, are u trying to create a new mod?");
-                            break;
-                        }
+                    }
+                    if (!gameVersionCompatible)
+                    {
+                        MelonLogger.Error($"The mod \"{loadedMod.Name}\" isn't compatible with game version {GameVersion}");
+                        MelonLogger.Error("Supported versions: " + string.Join(", ", storedMod.GameVersion));
+                    }
+                }
+
+                if (comparison <= 0)
+                {
+                    foreach (string incompatibleMod in storedMod.IncompatibleMods.Where(x => loadedModNames.Contains(x)))
+                    {
+                        MelonLogger.Error($"The mod \"{loadedMod.Name}\" isn't compatible with mod {incompatibleMod}");
                     }
                 }
             }
         }
     }
 
-    public class ModsInfo
+    public class WebModInfo
     {
-        public string Name { get; set; }
         public string Version { get; set; }
         public string Author { get; set; }
         public string DownloadLink { get; set; }
+        public string HomePage { get; set; }
         public string[] GameVersion { get; set; }
         public string Description { get; set; }
         public string[] DependentMods { get; set; }
+        public string[] DependentLibs { get; set; }
+        public string[] IncompatibleMods { get; set; }
         public string SHA256 { get; set; }
+    }
 
-        public ModsInfo()
-        {
-            Name = "Unknown";
-            Version = "Unknown";
-            Author = "Unknown";
-            DownloadLink = "";
-            GameVersion = new string[0];
-            Description = "";
-            DependentMods = new string[0];
-            SHA256 = "";
-        }
-
-        public ModsInfo(string name, string version, string author, string downloadLink, string[] gameVersion, string description, string[] dependentMods, string sha256)
-        {
-            Name = name;
-            Version = version;
-            Author = author;
-            DownloadLink = downloadLink;
-            GameVersion = gameVersion;
-            Description = description;
-            DependentMods = dependentMods;
-            SHA256 = sha256;
-        }
+    public class LocalModInfo
+    {
+        public string Name { get; set; }
+        public string Version { get; set; }
+        public string SHA256 { get; set; }
     }
 }
