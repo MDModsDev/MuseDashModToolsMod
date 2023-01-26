@@ -124,34 +124,6 @@ namespace MuseDashModTools
         public string[] DependentLibs { get; set; }
         public string[] IncompatibleMods { get; set; }
         public string SHA256 { get; set; }
-
-        public WebModInfo()
-        {
-            Version = "Unknown";
-            Author = "Unknown";
-            DownloadLink = "";
-            HomePage = "";
-            GameVersion = new string[0];
-            Description = "";
-            DependentMods = new string[0];
-            DependentLibs = new string[0];
-            IncompatibleMods = new string[0];
-            SHA256 = "";
-        }
-
-        public WebModInfo(string version, string author, string downloadLink, string homePage, string[] gameVersion, string description, string[] dependentMods, string[] dependentLibs, string[] incompatibleMods, string sha256)
-        {
-            Version = version;
-            Author = author;
-            DownloadLink = downloadLink;
-            HomePage = homePage;
-            GameVersion = gameVersion;
-            Description = description;
-            DependentMods = dependentMods;
-            DependentLibs = dependentLibs;
-            IncompatibleMods = incompatibleMods;
-            SHA256 = sha256;
-        }
     }
 
     public class LocalModInfo
