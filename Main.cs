@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace MuseDashModTools
@@ -15,7 +14,7 @@ namespace MuseDashModTools
     internal class Main : MelonMod
     {
         private static Version GameVersion { get; set; }
-        private static List<LocalModInfo> modsInfos = new List<LocalModInfo>();
+        private static List<LocalModInfo> ModInfos = new List<LocalModInfo>();
         private const string ModLinks = "https://raw.githubusercontent.com/MDModsDev/ModLinks/dev/ModLinks.json";
 
         public override void OnInitializeMelon()
@@ -23,6 +22,8 @@ namespace MuseDashModTools
             ReadMods();
             CheckingLatestMods();
         }
+
+#pragma warning disable S3885
 
         private void ReadMods()
         {
@@ -33,32 +34,11 @@ namespace MuseDashModTools
             {
                 var mod = new LocalModInfo();
                 var assembly = Assembly.LoadFrom(file);
-                PropertyInfo[] properties = assembly.GetCustomAttribute(typeof(MelonInfoAttribute)).GetType().GetProperties();
-                foreach (var property in properties)
-                {
-                    if (property.Name == "Name")
-                    {
-                        mod.Name = property.GetValue(assembly.GetCustomAttribute(typeof(MelonInfoAttribute)), null).ToString();
-                    }
-                    if (property.Name == "Version")
-                    {
-                        mod.Version = property.GetValue(assembly.GetCustomAttribute(typeof(MelonInfoAttribute)), null).ToString();
-                    }
-                }
-                modsInfos.Add(mod);
-            }
-
-            FileInfo[] fileInfos = new DirectoryInfo(path).GetFiles();
-            for (int i = 0; i < modsInfos.Count; i++)
-            {
-                SHA256 mySHA256 = SHA256.Create();
-                var fInfo = fileInfos[i];
-                FileStream fileStream = fInfo.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                fileStream.Position = 0;
-                byte[] hashValue = mySHA256.ComputeHash(fileStream);
-                string output = BitConverter.ToString(hashValue).Replace("-", "").ToLower();
-                modsInfos[i].SHA256 = output;
-                fileStream.Close();
+                var attribute = MelonUtils.PullAttributeFromAssembly<MelonInfoAttribute>(assembly);
+                mod.Name = attribute.Name;
+                mod.Version = attribute.Version;
+                mod.SHA256 = MelonUtils.ComputeSimpleSHA256Hash(file);
+                ModInfos.Add(mod);
             }
         }
 
@@ -71,8 +51,8 @@ namespace MuseDashModTools
             string Datas = Encoding.Default.GetString(webClient.DownloadData(ModLinks));
             webClient.Dispose();
             var WebModsInfo = JsonConvert.DeserializeObject<Dictionary<string, WebModInfo>>(Datas);
-            string[] loadedModNames = modsInfos.Select(x => x.Name).ToArray();
-            foreach (var loadedMod in modsInfos)
+            string[] loadedModNames = ModInfos.Select(x => x.Name).ToArray();
+            foreach (var loadedMod in ModInfos)
             {
                 MelonLogger.Msg("--------------------");
                 if (!WebModsInfo.ContainsKey(loadedMod.Name))
@@ -85,50 +65,47 @@ namespace MuseDashModTools
                 int comparison = new Version(loadedMod.Version).CompareTo(new Version(storedMod.Version));
                 if (comparison > 0)
                 {
-                    MelonLogger.Msg($"WOW {loadedMod.Name.ToUpper()} MOD CREATER");
+                    MelonLogger.Msg($"WOW {loadedMod.Name} MOD CREATER");
                 }
                 else if (comparison == 0)
                 {
-                    MelonLogger.Msg($"the mod \"{loadedMod.Name}\" is up-to-date");
+                    if (loadedMod.SHA256 != storedMod.SHA256)
+                    {
+                        MelonLogger.Warning($"The mod \"{loadedMod.Name}\" doesn't match what we have stored, may be modified. Proceed with caution.");
+                    }
+                    else
+                    {
+                        MelonLogger.Msg($"The mod \"{loadedMod.Name}\" is up-to-date");
+                    }
                 }
                 else if (comparison < 0)
                 {
                     MelonLogger.Warning($"You are using an outdated version of \"{loadedMod.Name}\", please update the mod (if your game is downgraded, ignore this message)");
                 }
 
-                var supportedVersions = new Version[storedMod.GameVersion.Length];
-                bool result = comparison > 0;
-                if (!result)
+                bool gameVersionCompatible = false;
+                if (comparison == 0)
                 {
-                    for (int i = 0; i < storedMod.GameVersion.Length; i++)
+                    foreach (var compatibleVersion in storedMod.GameVersion)
                     {
-                        var version = storedMod.GameVersion[i] == "*" ? GameVersion : new Version(storedMod.GameVersion[i]);
+                        var version = compatibleVersion == "*" ? GameVersion : new Version(compatibleVersion);
                         if (GameVersion.CompareTo(version) == 0)
                         {
-                            result = true;
+                            gameVersionCompatible = true;
                         }
-                        supportedVersions[i] = version;
                     }
-                    if (!result)
+                    if (!gameVersionCompatible)
                     {
                         MelonLogger.Error($"The mod \"{loadedMod.Name}\" isn't compatible with game version {GameVersion}");
                         MelonLogger.Error("Supported versions: " + string.Join(", ", storedMod.GameVersion));
                     }
                 }
-                
-                if (loadedMod.SHA256 != storedMod.SHA256)
-                {
-                    MelonLogger.Warning($"The mod \"{loadedMod.Name}\" doesn't match what we have stored, may be modified. Proceed with caution.");
-                }
 
-                if (!result)
+                if (comparison <= 0)
                 {
-                    foreach (string incompatibleMod in storedMod.IncompatibleMods)
+                    foreach (string incompatibleMod in storedMod.IncompatibleMods.Where(x => loadedModNames.Contains(x)))
                     {
-                        if (loadedModNames.Contains(incompatibleMod))
-                        {
-                            MelonLogger.Error($"The mod \"{loadedMod.Name}\" isn't compatible with mod {incompatibleMod}");
-                        }
+                        MelonLogger.Error($"The mod \"{loadedMod.Name}\" isn't compatible with mod {incompatibleMod}");
                     }
                 }
             }
@@ -140,6 +117,7 @@ namespace MuseDashModTools
         public string Version { get; set; }
         public string Author { get; set; }
         public string DownloadLink { get; set; }
+        public string HomePage { get; set; }
         public string[] GameVersion { get; set; }
         public string Description { get; set; }
         public string[] DependentMods { get; set; }
@@ -151,6 +129,7 @@ namespace MuseDashModTools
             Version = "Unknown";
             Author = "Unknown";
             DownloadLink = "";
+            HomePage = "";
             GameVersion = new string[0];
             Description = "";
             DependentMods = new string[0];
@@ -158,11 +137,12 @@ namespace MuseDashModTools
             SHA256 = "";
         }
 
-        public WebModInfo(string version, string author, string downloadLink, string[] gameVersion, string description, string[] dependentMods, string[] incompatibleMods, string sha256)
+        public WebModInfo(string version, string author, string downloadLink, string homePage, string[] gameVersion, string description, string[] dependentMods, string[] incompatibleMods, string sha256)
         {
             Version = version;
             Author = author;
             DownloadLink = downloadLink;
+            HomePage = homePage;
             GameVersion = gameVersion;
             Description = description;
             DependentMods = dependentMods;
