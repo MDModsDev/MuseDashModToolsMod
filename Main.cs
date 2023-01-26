@@ -15,7 +15,7 @@ namespace MuseDashModTools
     {
         private static Version GameVersion { get; set; }
         private static List<LocalModInfo> ModInfos = new List<LocalModInfo>();
-        private const string ModLinks = "https://raw.githubusercontent.com/MDModsDev/ModLinks/dev/ModLinks.json";
+        private const string ModLinks = "https://raw.githubusercontent.com/MDModsDev/ModLinks/main/ModLinks.json";
 
         public override void OnInitializeMelon()
         {
