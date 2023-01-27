@@ -15,7 +15,7 @@ namespace MuseDashModTools
     {
         private static Version GameVersion { get; set; }
         private static List<LocalModInfo> ModInfos = new List<LocalModInfo>();
-        private const string ModLinks = "https://raw.githubusercontent.com/MDModsDev/ModLinks/main/ModLinks.json";
+        private const string ModLinks = "MDModsDev/ModLinks/main/ModLinks.json";
 
         public override void OnInitializeMelon()
         {
@@ -48,7 +48,16 @@ namespace MuseDashModTools
             {
                 Encoding = Encoding.UTF8
             };
-            string Datas = Encoding.Default.GetString(webClient.DownloadData(ModLinks));
+            string Datas;
+            try
+            {
+                Datas = webClient.DownloadString("https://raw.githubusercontent.com/" + ModLinks);
+            }
+            catch (WebException)
+            {
+                Datas = webClient.DownloadString("https://raw.fastgit.org/" + ModLinks);
+            }
+
             webClient.Dispose();
             var WebModsInfo = JsonConvert.DeserializeObject<Dictionary<string, WebModInfo>>(Datas);
             string[] loadedModNames = ModInfos.Select(x => x.Name).ToArray();
