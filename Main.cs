@@ -50,17 +50,18 @@ namespace MuseDashModTools
             };
             string Datas = Encoding.Default.GetString(webClient.DownloadData(ModLinks));
             webClient.Dispose();
-            var WebModsInfo = JsonConvert.DeserializeObject<Dictionary<string, WebModInfo>>(Datas);
+            var WebModsInfo = JsonConvert.DeserializeObject<List<WebModInfo>>(Datas);
             string[] loadedModNames = ModInfos.Select(x => x.Name).ToArray();
             foreach (var loadedMod in ModInfos)
             {
+                int webModIdx = WebModsInfo.FindIndex(x=> x.Name == loadedMod.Name);
                 MelonLogger.Msg("--------------------");
-                if (!WebModsInfo.ContainsKey(loadedMod.Name))
+                if (webModIdx == -1)
                 {
                     MelonLogger.Warning($"The mod \"{loadedMod.Name}\" isn't tracked.");
                     continue;
                 }
-                WebModInfo storedMod = WebModsInfo[loadedMod.Name];
+                WebModInfo storedMod = WebModsInfo[webModIdx];
 
                 int comparison = new Version(loadedMod.Version).CompareTo(new Version(storedMod.Version));
                 if (comparison > 0)
@@ -114,6 +115,7 @@ namespace MuseDashModTools
 
     public class WebModInfo
     {
+        public string Name { get; set; }
         public string Version { get; set; }
         public string Author { get; set; }
         public string DownloadLink { get; set; }
