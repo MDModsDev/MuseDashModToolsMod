@@ -35,6 +35,10 @@ namespace MuseDashModTools
                 var mod = new LocalModInfo();
                 var assembly = Assembly.LoadFrom(file);
                 var attribute = MelonUtils.PullAttributeFromAssembly<MelonInfoAttribute>(assembly);
+                if (attribute == null)
+                {
+                    continue;
+                }
                 mod.Name = attribute.Name;
                 mod.Version = attribute.Version;
                 mod.SHA256 = MelonUtils.ComputeSimpleSHA256Hash(file);
