@@ -8,6 +8,6 @@
 
         public const string Author = "lxy & \"Bálint\" as balls";
 
-        public const string Version = "1.1.1";
+        public const string Version = "1.1.3";
     }
 }

@@ -1,35 +1,35 @@
-﻿using MelonLoader;
-using MelonLoader.InternalUtils;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
+using MelonLoader;
+using MelonLoader.InternalUtils;
+using Newtonsoft.Json;
 
 namespace MuseDashModTools
 {
     internal class Main : MelonMod
     {
-        private static Version GameVersion { get; set; }
-        private static List<LocalModInfo> ModInfos = new List<LocalModInfo>();
-        private const string ModLinks = "https://raw.githubusercontent.com/MDModsDev/ModLinks/dev/ModLinks.json";
+        private const string ModLinks = "MDModsDev/ModLinks/dev/ModLinks.json";
+        private static readonly List<LocalModInfo> ModInfos = new List<LocalModInfo>();
+        private Version GameVersion { get; set; }
+
 
         public override void OnInitializeMelon()
         {
             ReadMods();
             CheckingLatestMods();
         }
-
 #pragma warning disable S3885
 
         private void ReadMods()
         {
             GameVersion = new Version(UnityInformationHandler.GameVersion);
-            string path = MelonHandler.ModsDirectory;
-            string[] files = Directory.GetFiles(path, "*.dll");
+            var path = MelonHandler.ModsDirectory;
+            var files = Directory.GetFiles(path, "*.dll");
             foreach (var file in files)
             {
                 var mod = new LocalModInfo();
@@ -44,29 +44,37 @@ namespace MuseDashModTools
 
         private void CheckingLatestMods()
         {
-            var webClient = new WebClient
+            var webClient = new WebClient { Encoding = Encoding.UTF8 };
+            string data;
+            try
             {
-                Encoding = Encoding.UTF8
-            };
-            string Datas = Encoding.Default.GetString(webClient.DownloadData(ModLinks));
+                data = webClient.DownloadString("https://raw.githubusercontent.com/" + ModLinks);
+            }
+            catch (WebException)
+            {
+                data = webClient.DownloadString("https://raw.fastgit.org/" + ModLinks);
+            }
+
             webClient.Dispose();
-            var WebModsInfo = JsonConvert.DeserializeObject<List<WebModInfo>>(Datas);
-            string[] loadedModNames = ModInfos.Select(x => x.Name).ToArray();
+
+            var webModInfos = JsonConvert.DeserializeObject<List<WebModInfo>>(data);
+            var loadedModNames = ModInfos.Select(x => x.Name).ToArray();
             foreach (var loadedMod in ModInfos)
             {
-                int webModIdx = WebModsInfo.FindIndex(x=> x.Name == loadedMod.Name);
-                MelonLogger.Msg("--------------------");
+                var webModIdx = webModInfos.FindIndex(x => x.Name == loadedMod.Name);
+                MelonLogger.Msg("------------------------------");
                 if (webModIdx == -1)
                 {
                     MelonLogger.Warning($"The mod \"{loadedMod.Name}\" isn't tracked.");
                     continue;
                 }
-                WebModInfo storedMod = WebModsInfo[webModIdx];
 
-                int comparison = new Version(loadedMod.Version).CompareTo(new Version(storedMod.Version));
+                var storedMod = webModInfos[webModIdx];
+                var comparison = new Version(loadedMod.Version).CompareTo(new Version(storedMod.Version));
+
                 if (comparison > 0)
                 {
-                    MelonLogger.Msg($"WOW {loadedMod.Name} MOD CREATER");
+                    MelonLogger.Msg($"WOW {loadedMod.Name} MOD CREATOR");
                 }
                 else if (comparison == 0)
                 {
@@ -79,12 +87,12 @@ namespace MuseDashModTools
                         MelonLogger.Msg($"The mod \"{loadedMod.Name}\" is up-to-date");
                     }
                 }
-                else if (comparison < 0)
+                else
                 {
                     MelonLogger.Warning($"You are using an outdated version of \"{loadedMod.Name}\", please update the mod (if your game is downgraded, ignore this message)");
                 }
 
-                bool gameVersionCompatible = false;
+                var gameVersionCompatible = false;
                 if (comparison == 0)
                 {
                     foreach (var compatibleVersion in storedMod.GameVersion)
@@ -95,6 +103,7 @@ namespace MuseDashModTools
                             gameVersionCompatible = true;
                         }
                     }
+
                     if (!gameVersionCompatible)
                     {
                         MelonLogger.Error($"The mod \"{loadedMod.Name}\" isn't compatible with game version {GameVersion}");
@@ -104,7 +113,7 @@ namespace MuseDashModTools
 
                 if (comparison <= 0)
                 {
-                    foreach (string incompatibleMod in storedMod.IncompatibleMods.Where(x => loadedModNames.Contains(x)))
+                    foreach (var incompatibleMod in storedMod.IncompatibleMods.Where(x => loadedModNames.Contains(x)))
                     {
                         MelonLogger.Error($"The mod \"{loadedMod.Name}\" isn't compatible with mod {incompatibleMod}");
                     }
