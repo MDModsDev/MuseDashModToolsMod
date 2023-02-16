@@ -23,7 +23,6 @@ namespace MuseDashModTools
             ReadMods();
             CheckingLatestMods();
         }
-#pragma warning disable S3885
 
         private void ReadMods()
         {
@@ -33,7 +32,7 @@ namespace MuseDashModTools
             foreach (var file in files)
             {
                 var mod = new LocalModInfo();
-                var assembly = Assembly.LoadFrom(file);
+                var assembly = Assembly.Load(File.ReadAllBytes(file)); 
                 var attribute = MelonUtils.PullAttributeFromAssembly<MelonInfoAttribute>(assembly);
                 mod.Name = attribute.Name;
                 mod.Version = attribute.Version;
