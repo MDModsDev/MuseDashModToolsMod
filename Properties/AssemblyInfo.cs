@@ -1,7 +1,8 @@
-﻿using MelonLoader;
-using System.Reflection;
+﻿using System.Reflection;
 using System.Runtime.InteropServices;
+using MelonLoader;
 using static MuseDashModTools.MelonBuildInfo;
+using Main = MuseDashModTools.Main;
 
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
@@ -35,5 +36,5 @@ using static MuseDashModTools.MelonBuildInfo;
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion(Version)]
 [assembly: AssemblyFileVersion(Version)]
-[assembly: MelonInfo(typeof(MuseDashModTools.Main), Name, Version, Author)]
+[assembly: MelonInfo(typeof(Main), Name, Version, Author)]
 [assembly: MelonGame("PeroPeroGames", "MuseDash")]
