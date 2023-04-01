@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -82,16 +83,10 @@ namespace MuseDashModTools
                     continue;
                 }
 
-                if (!webMod.GameVersion.Any(x => x == "*" || x == GameVersion))
-                {
-                    MelonLogger.Error($"The mod \"{localMod.Name}\" isn't compatible with game version {GameVersion}");
-                    MelonLogger.Error("Supported versions: " + string.Join(", ", webMod.GameVersion));
-                }
-
                 var comparison = new Version(localMod.Version).CompareTo(new Version(webMod.Version));
                 if (comparison > 0)
                 {
-                    MelonLogger.Msg($"WOW {localMod.Name} MOD CREATOR");
+                    MelonLogger.Msg(ConsoleColor.DarkMagenta, $"WOW {localMod.Name} MOD CREATOR");
                 }
                 else if (comparison == 0)
                 {
@@ -107,6 +102,14 @@ namespace MuseDashModTools
                 else
                 {
                     MelonLogger.Warning($"You are using an outdated version of \"{localMod.Name}\", please update the mod (if your game is downgraded, ignore this message)");
+                }
+
+                if (!webMod.GameVersion.Any(x => x == "*" || x == GameVersion))
+                {
+                    MelonLogger.Error($"The mod \"{localMod.Name}\" isn't compatible with game version {GameVersion}");
+                    MelonLogger.Error("Supported versions: " + string.Join(", ", webMod.GameVersion));
+                    if (File.Exists(UIPath))
+                        Process.Start(UIPath);
                 }
 
                 if (comparison <= 0)
