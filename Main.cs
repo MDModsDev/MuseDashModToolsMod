@@ -108,8 +108,8 @@ namespace MuseDashModTools
                 {
                     MelonLogger.Error($"The mod \"{localMod.Name}\" isn't compatible with game version {GameVersion}");
                     MelonLogger.Error("Supported versions: " + string.Join(", ", webMod.GameVersion));
-                    if (File.Exists(UIPath))
-                        Process.Start(UIPath);
+                    /*if (File.Exists(UIPath))
+                        Process.Start(UIPath);*/
                 }
 
                 if (comparison <= 0)
